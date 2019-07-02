@@ -1,5 +1,9 @@
 import getpass
+import sys
 import os
+import time
+from datetime import datetime
+
 
 def menu(opcao):
     if opcao == 1:
@@ -7,9 +11,37 @@ def menu(opcao):
     elif opcao == 2:
         regProfessor()
     elif opcao == 3:
-        acessoPatrimonio()
-    if opcao == 4:
-        return
+        verificaSenha()
+    elif opcao == 4:
+        menuHistAcesso()
+    else:
+        sys.exit()
+
+
+def verificaSenha():
+    try:
+        arquivo = open('professores.txt', 'r')
+        arquivo.close()
+    except:
+        print('Nenhum professor cadastrado!')
+        input('\nPressione enter para voltar ao Menu\n>> ')
+        main()
+
+    os.system('cls')
+    senha = input('Insira senha: ')  # getpass
+
+    arquivo = open('professores.txt', 'r')
+    for linha in arquivo:
+        if linha[:-1] == senha:
+            matricula = arquivo.readline()
+            arquivo.close()
+            menuAcesso(senha, matricula)
+
+    arquivo.close()
+
+    print('Senha incorreta')
+    time.sleep(2)
+    main()
 
 
 def regPatrimonio():
@@ -23,12 +55,21 @@ def regPatrimonio():
         num_patrimonio = 1
 
     arquivo = open('patrimonio.txt', 'a')
+    
     descricao = input('Descrição do patrimônio: ')
     arquivo.write(descricao + '\n')
     arquivo.write(str(num_patrimonio) + '\n')
+    
     arquivo.close()
 
     print('\n' + 'Patrimônio registrado com sucesso!' + '\n')
+
+    print('Registrar novamente [1]\nVoltar para o Menu [2]')
+    opcao = lerOpcao(input('>> '))
+    if opcao == '1':
+        return regPatrimonio()
+
+    return main()
 
 
 def regProfessor():
@@ -48,6 +89,86 @@ def regProfessor():
 
     print('\n' + 'Professor registrado com sucesso!' + '\n')
 
+    print('Registrar novamente [1]\nVoltar para o Menu [2]')
+    opcao = lerOpcao(input('>> '))
+    if opcao == '1':
+        return regProfessor()
+
+    return main()
+
+
+def regAcesso(matricula, numero_patrimonio, tipo):
+    arquivo = open('acesso.txt', 'a')
+    arquivo.write(matricula)
+    arquivo.write(numero_patrimonio + '\n')
+    arquivo.write(tipo + '\n')
+
+    data = datetime.now()
+    dia = str(data.day)
+    mes = str(data.month)
+    ano = str(data.year)
+    hora = str(data.hour)
+    min = str(data.minute)
+    sec = str(data.second)
+
+    arquivo.write(dia + '/' + mes + '/' + ano + '\n')
+    arquivo.write(hora + '/' + min + '/' + sec + '\n')
+
+    arquivo.close()
+
+
+def menuAcesso(senha, matricula):
+    def retirarPatrimonio(matricula):
+        os.system('cls')
+        print('-' * 10 + 'RETIRAR PATRIMÔNIO' + '-' * 10)
+        numero_patrimonio = input('Insira o número do patrimônio para retirar: ')
+        # Função que verifica o numero de patrimonio na lista de patrimônions cadastrados
+        tipo = 'retirada'
+        regAcesso(matricula, numero_patrimonio, tipo)
+
+        print('\n' + 'Patrimônio retirado com sucesso!' + '\n')
+
+        print('Retirar outro [1]\nVoltar para o Menu de Acesso [2]')
+        opcao = lerOpcao(input('>> '))
+        if opcao == '1':
+            return retirarPatrimonio(matricula)
+
+        return menuAcesso(senha, matricula)
+
+    def devolucaoPatrimonio(matricula):
+        os.system('cls')
+        print('-' * 10 + 'DEVOLUÇÃO PATRIMÔNIO' + '-' * 10)
+        numero_patrimonio = input('Insira o número do patrimônio para devolução: ')
+        tipo = 'devolução'
+        regAcesso(matricula, numero_patrimonio, tipo)
+
+        print('\n' + 'Patrimônio retornado com sucesso!' + '\n')
+
+        print('Retornar outro patrimônio [1]\nVoltar para o Menu de Acesso [2]')
+        opcao = lerOpcao(input('>> '))
+        if opcao == '1':
+            return devolucaoPatrimonio(matricula)
+
+        return menuAcesso(senha, matricula)
+
+    os.system('cls')
+
+    print('-' * 12 + 'REG ACESSO' + '-' * 12)
+    print('''Retirar patrimônio [1]
+Devolução patrimônio [2]
+Voltar para o Menu [3]''')
+    opcao = input('>> ')
+    while opcao not in ['1', '2', '3']:
+        print('Opção inválida!')
+        opcao = input('>> ')
+
+    if opcao == '1':
+        retirarPatrimonio(matricula)
+    elif opcao == '2':
+        devolucaoPatrimonio(matricula)
+    else:
+        main()
+
 
 def criptografarSenha(senha):
     senha_cripto = senha
@@ -55,14 +176,8 @@ def criptografarSenha(senha):
     return senha_cripto
 
 
-def acessoPatrimonio():
+def menuHistAcesso():
     def listaPatrimonioDispo():
-        pass
-
-    def recebimentoPatrimonio():
-        pass
-
-    def devolucaoPatrimonio():
         pass
 
     def listaPatrimonioDevolucao():
@@ -77,21 +192,34 @@ def acessoPatrimonio():
     pass
 
 
-opcao = '0'
-while opcao != '4':
-    os.system('cls')
-
-    print('-'*20 + 'MENU' + '-'*20)
-    print('''Registro de Patrimônios [1]
-Registro de Professores [2]
-Registro de acesso aos Patrimônios [3]
-Sair [4]
->>''', end=' ')
-    opcao = input()
-    while opcao not in ['1', '2', '3', '4']:
+def lerOpcao(opcao):
+    while opcao not in ['1', '2']:
         print('Opção inválida!')
         opcao = input('>> ')
-    os.system('cls')
 
-    menu(int(opcao))
+    return opcao
 
+
+def main():
+    opcao = '0'
+    while opcao != '4':
+        os.system('cls')
+
+        print('-'*20 + 'MENU' + '-'*20)
+        print('''Registro de Patrimônios [1]
+Registro de Professores [2]
+Registro de acesso aos Patrimônios [3]
+Histórico de Acesso [4]
+Sair [5]
+>>''', end=' ')
+        opcao = input()
+        while opcao not in ['1', '2', '3', '4', '5']:
+            print('Opção inválida!')
+            opcao = input('>> ')
+
+        os.system('cls')
+
+        menu(int(opcao))
+
+
+main()
