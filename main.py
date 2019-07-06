@@ -30,7 +30,8 @@ def verificaSenha():
         main()
 
     os.system('cls')
-    senha = input('Insira senha: ')  # getpass
+    senha = input('Insira senha: ').strip()  # getpass
+
     arquivo = open('professores.txt', 'r')
     lista = arquivo.readlines()
     if senha+'\n' in lista:
@@ -38,39 +39,42 @@ def verificaSenha():
         nomeProf = lista[pos-1]
         matricula = lista[pos+1]
         arquivo.close()
+
         menuAcesso(senha, nomeProf, matricula)
 
     arquivo.close()
 
     print('Senha incorreta')
-    time.sleep(2)
+    input('\nPressione enter para voltar ao Menu\n>> ')
     main()
 
 
-def verificaPatrimonio(n_patrimonio):
-    # Verifica se o patrimonio que se quer retirar existe e está disponível / se o patrimonio que se quer devolver foi retirado
+def verificaPatrimonioDispo(n_patrimonio):
+    # Verifica se o patrimonio que se quer retirar ou devolver está disponível
+
     try:
-        arquivo = open('txt', 'r')
+        arquivo = open('PatrimoniosDisponiveis.txt', 'r')
         arquivo.close()
     except:
-        print('Nenhum patrimônio cadastrado!')
-        input('\nPressione enter para voltar ao Menu\n>> ')
+        print('\nNenhum patrimônio cadastrado')
+        input('Pressione enter para voltar ao menu\n>>')
         main()
 
-    arquivo = open('txt', 'r')
-    for linha in arquivo:
-        if linha[:-1] == n_patrimonio:
-            return True
+    arquivo = open('PatrimoniosDisponiveis.txt', 'r')
+    lista = arquivo.readlines()
+    if n_patrimonio+'\n' in lista:
+        pos = lista.index(n_patrimonio+'\n') - 1
+        descricao = lista[pos]
+        arquivo.close()
+        return [True, descricao]
 
-    return False
+    arquivo.close()
+
+    return [False, '']
 
 
 def verificaProfessor(matricula):
-    try:
-        arquivo = open('professores.txt', 'r')
-        arquivo.close()
-    except:
-        return True
+    # Verifica se a matrícula ja foi cadastrada em outro professor
 
     arquivo = open('professores.txt', 'r')
     for linha in arquivo:
@@ -94,7 +98,7 @@ def regPatrimonio():
 
     arquivo = open('patrimonio.txt', 'a')
     
-    descricao = input('Descrição do patrimônio: ')
+    descricao = input('Descrição do patrimônio: ').strip()
     arquivo.write(descricao + '\n')
     arquivo.write(str(num_patrimonio) + '\n')
     
@@ -114,14 +118,15 @@ def regPatrimonio():
 
 def regProfessor():
     # Faz o registro de professores
+
     print('-' * 30 + 'REG PROFESSOR' + '-' * 30)
 
     arquivo = open('professores.txt', 'a')
 
-    nome = input('Nome do professor: ')
-    senha = input('Senha do professor: ')   # getpass.getpass() para não mostrar a senha
+    nome = input('Nome do professor: ').strip()
+    senha = input('Senha do professor (apenas letras e números): ').strip()   # getpass.getpass() para não mostrar a senha
     senha_cripto = criptografarSenha(senha)
-    matricula = input('Matrícula do professor: ')
+    matricula = input('Matrícula do professor: ').strip()
     isProfCadastrado = verificaProfessor(matricula)  # Verifica se a matricula digitada ja foi cadastrada
     if isProfCadastrado:
         print('\nProfessor ja cadastrado\n')
@@ -171,12 +176,25 @@ def menuAcesso(senha, nomeProf, matricula):
     def retirarPatrimonio():
         os.system('cls')
         print('-' * 30 + 'RETIRAR PATRIMÔNIO' + '-' * 30)
-        numero_patrimonio = input('Insira o número do patrimônio para retirar: ')
+        numero_patrimonio = input('Insira o número do patrimônio para retirar: ').strip()
         # Função que verifica o numero de patrimonio existe na lista de patrimônions disponíveis (verificaPatriDispo)
-        tipo = 'retirada'
-        regAcesso(matricula, numero_patrimonio, tipo)  # Função que escreve em acesso.txt
-        regPatrimonioRetirados(numero_patrimonio, nomeProf, matricula)  # Função que registra os patrimônios retirados
-        atualizaPatrimonioDispo(numero_patrimonio)  # Função que remove o patrimônio que agora foi retirado da lista PatrimonioDisponiveis
+        valores_de_retorno = verificaPatrimonioDispo(numero_patrimonio)
+        verificaDisponibilidade = valores_de_retorno[0]  # Valor True ou False para verificar se o patrimonio pode ser retirado ou nao
+        descricao = valores_de_retorno[1]  # Descrição do patrimônio que vai ser retirado
+
+        if verificaDisponibilidade:
+            tipo = 'retirada'
+            # Função que escreve em acesso.txt
+            regAcesso(matricula, numero_patrimonio, tipo)
+            # Função que registra os patrimônios retirados
+            regPatrimonioRetirados(descricao, numero_patrimonio, nomeProf, matricula)
+            # Função que remove o patrimônio que agora foi retirado da lista PatrimonioDisponiveis
+            atualizaPatrimonioDispo(numero_patrimonio)
+
+        else:
+            print('\nPatrimônio não consta na lista de Disponíveis')
+            input('Pressione enter para voltar ao Menu\n>> ')
+            main()
 
         print('\n' + 'Patrimônio retirado com sucesso!' + '\n')
 
@@ -190,12 +208,20 @@ def menuAcesso(senha, nomeProf, matricula):
     def devolucaoPatrimonio():
         os.system('cls')
         print('-' * 30 + 'DEVOLUÇÃO PATRIMÔNIO' + '-' * 30)
-        numero_patrimonio = input('Insira o número do patrimônio para devolução: ')
-        # Função que verifica o numero de patrimonio existe na lista de patrimônions retirados (verificaPatriRetirados)
-        tipo = 'devolução'
-        regAcesso(matricula, numero_patrimonio, tipo)  # Função que escreve em acesso.txt
-        regPatrimonioDispo(numero_patrimonio)  # Função que registra os patrimônios disponíveis
-        atualizaPatrimoniosRetirados(numero_patrimonio)  # Função que remove o patrimônio que agora está disponivel da lista PatrimonioRetirados
+        numero_patrimonio = input('Insira o número do patrimônio para devolução: ').strip()
+        valores_de_retorno = verificaPatrimonioDispo(numero_patrimonio)
+        verificaDisponibilidade = valores_de_retorno[0]  # Valor True ou False para verificar se o patrimonio pode ser retirado ou nao
+
+        if not verificaDisponibilidade:
+            tipo = 'devolução'
+            regAcesso(matricula, numero_patrimonio, tipo)  # Função que escreve em acesso.txt
+            regPatrimonioDispo(numero_patrimonio)  # Função que registra os patrimônios disponíveis
+            atualizaPatrimoniosRetirados(numero_patrimonio)  # Função que remove o patrimônio que agora está disponivel da lista PatrimonioRetirados
+
+        else:
+            print('\nEsse Patrimônio não foi retirado')
+            input('Pressione enter para voltar ao Menu\n>> ')
+            main()
 
         print('\n' + 'Patrimônio retornado com sucesso!' + '\n')
 
@@ -227,15 +253,23 @@ Voltar para o Menu [3]''')
 
 
 def criptografarSenha(senha):
+    # Falta verificar se os caracteres estão ok
+
+    if len(senha) < 3:
+        print('\nSenha necessita pelo menos 3 caracteres')
+        input('Pressione enter para voltar ao menu\n>>')
+        main()
+        
     senha_cripto = senha
 
     return senha_cripto
 
 
-def regPatrimonioRetirados(numero_patrimonio, nomeProf, matricula):
+def regPatrimonioRetirados(descricao, numero_patrimonio, nomeProf, matricula):
     # Registra os patrimônios que foram retirados no arquivo PatrimoniosRetirados.txt
 
     arquivo = open('PatrimoniosRetirados.txt', 'a')
+    arquivo.write(descricao)
     arquivo.write(numero_patrimonio + '\n')
     arquivo.write(nomeProf)
     arquivo.write(matricula)
@@ -255,6 +289,7 @@ def atualizaPatrimoniosRetirados(numero_patrimonio):
     lista.pop(pos)
     lista.pop(pos)
     lista.pop(pos)
+    lista.pop(pos - 1)
     arquivo.writelines(lista)
     arquivo.close()
 
@@ -263,9 +298,13 @@ def regPatrimonioDispo(numero_patrimonio):
     # Registra os patrimônios disponíveis sempre que um patrimônio é devolvido ou um novo é registrado
 
     arq = open('patrimonio.txt', 'r')
+
     lista = arq.readlines()
     pos = lista.index(str(numero_patrimonio) + '\n')
     descricao = lista[pos-1]
+
+    arq.close()
+
     arquivo = open('PatrimoniosDisponiveis.txt', 'a')
     arquivo.write(descricao)
     arquivo.write(str(numero_patrimonio) + '\n')
@@ -290,10 +329,54 @@ def atualizaPatrimonioDispo(numero_patrimonio):
 def menuHistAcesso():
 
     def listaPatrimonioDispo():
-        pass
+        os.system('cls')
+        print('-'*30 + 'PATRIMÔNIOS DISPONÍVEIS' + '-'*30, end='\n\n')
+        try:
+            arquivo = open('PatrimoniosDisponiveis.txt', 'r')
+            arquivo.close()
+        except:
+            print('Nenhum Patrimônio disponível!')
+            input('Pressione enter para voltar\n>>')
+            menuHistAcesso()
+
+        arquivo = open('PatrimoniosDisponiveis.txt', 'r')
+
+        lista = arquivo.readlines()
+        arquivo.seek(0, 0)
+
+        for x in range(int(len(lista) / 2)):
+            print('Descrição>{:.^40}NºPatrimônio>{:.>20}'.format(arquivo.readline()[:-1], arquivo.readline()))
+
+        arquivo.close()
+
+        input('\n\nPressione enter para voltar ao menu\n>>')
+        menuHistAcesso()
 
     def listaPatrimonioRetirados():
-        pass
+        os.system('cls')
+        print('-'*30 + 'PATRIMÔNIOS RETIRADOS' + '-'*30, end='\n\n')
+        print('                                        ||')
+        try:
+            arquivo = open('PatrimoniosRetirados.txt', 'r')
+            arquivo.close()
+        except:
+            print('Nenhum patrimônio retirado!')
+            input('Pressione enter para voltar\n>>')
+            menuHistAcesso()
+
+        arquivo = open('PatrimoniosRetirados.txt', 'r')
+
+        lista = arquivo.readlines()
+        arquivo.seek(0, 0)
+
+        for x in range(int(len(lista) / 4)):
+            print('Descrição>{:.^40}NºPatrimônio>{:.>20}'.format(arquivo.readline()[:-1], arquivo.readline()))
+            print('Professor>{:.^40}NºMatrícula>{:.>20}'.format(arquivo.readline()[:-1], arquivo.readline()))
+            print('                                        ||')
+        arquivo.close()
+
+        input('\n\nPressione enter para voltar ao menu\n>>')
+        menuHistAcesso()
 
     def profTempoComPatrimonio():
         pass
@@ -302,7 +385,7 @@ def menuHistAcesso():
         pass
 
     # Executa quando o menu do historico de acesso é chamado
-
+    os.system('cls')
     print('-' * 30 + 'MENU HISTÓRICO' + '-' * 30)
     print('''Listagem dos Patrimônios aguardando devolução [1]
 Listagem dos Patrimõnios disponíveis para retirada [2]
@@ -350,10 +433,10 @@ Acesso aos Patrimônios [3]
 Histórico de Acesso [4]
 Sair [5]
 >>''', end=' ')
-    opcao = input()
+    opcao = input().strip()
     while opcao not in ['1', '2', '3', '4', '5']:
         print('Opção inválida!')
-        opcao = input('>> ')
+        opcao = input('>> ').strip()
 
     os.system('cls')
 
