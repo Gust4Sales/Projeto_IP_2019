@@ -1,8 +1,9 @@
 import getpass
 import sys
 import os
-import time
-from datetime import datetime
+from datetime import datetime, date, timedelta
+
+CARACTERES = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789'
 
 
 def menu(opcao):
@@ -31,11 +32,18 @@ def verificaSenha():
 
     os.system('cls')
     senha = input('Insira senha: ').strip()  # getpass
-
+    senha_cripto = ''
+    for caractere in senha:
+        if caractere in CARACTERES:
+            index = CARACTERES.find(caractere) + 5
+            if index >= 63:
+                index -= 63
+            senha_cripto += CARACTERES[index]
     arquivo = open('professores.txt', 'r')
     lista = arquivo.readlines()
-    if senha+'\n' in lista:
-        pos = lista.index(senha+'\n')
+
+    if senha_cripto+'\n' in lista:
+        pos = lista.index(senha_cripto+'\n')
         nomeProf = lista[pos-1]
         matricula = lista[pos+1]
         arquivo.close()
@@ -87,6 +95,7 @@ def verificaProfessor(matricula):
 
 def regPatrimonio():
     # Faz o registro de patrimônios
+
     print('-' * 30 + 'REG PATRIMÔNIO' + '-' * 30)
 
     try:
@@ -121,12 +130,13 @@ def regProfessor():
 
     print('-' * 30 + 'REG PROFESSOR' + '-' * 30)
 
-    arquivo = open('professores.txt', 'a')
-
     nome = input('Nome do professor: ').strip()
     senha = input('Senha do professor (apenas letras e números): ').strip()   # getpass.getpass() para não mostrar a senha
     senha_cripto = criptografarSenha(senha)
     matricula = input('Matrícula do professor: ').strip()
+
+    arquivo = open('professores.txt', 'a')
+
     isProfCadastrado = verificaProfessor(matricula)  # Verifica se a matricula digitada ja foi cadastrada
     if isProfCadastrado:
         print('\nProfessor ja cadastrado\n')
@@ -148,21 +158,32 @@ def regProfessor():
     return main()
 
 
-def regAcesso(matricula, numero_patrimonio, tipo):
+def regAcesso(nomeProf, matricula, numero_patrimonio, tipo):
     # Escreve no arquivo acesso.txt com todas as informações da movimentação que foi efetuada
 
     arquivo = open('acesso.txt', 'a')
+    arquivo.write(nomeProf)
     arquivo.write(matricula)
     arquivo.write(numero_patrimonio + '\n')
     arquivo.write(tipo + '\n')
 
     data = datetime.now()
     dia = str(data.day)
+    if len(dia) < 2:
+        dia = '0' + dia
     mes = str(data.month)
+    if len(mes) < 2:
+        mes = '0' + mes
     ano = str(data.year)
     hora = str(data.hour)
+    if len(hora) < 2:
+        hora = '0' + hora
     min = str(data.minute)
+    if len(min) < 2:
+        min = '0' + min
     sec = str(data.second)
+    if len(sec) < 2:
+        sec = '0' + sec
 
     arquivo.write(dia + '/' + mes + '/' + ano + '\n')
     arquivo.write(hora + ':' + min + ':' + sec + '\n')
@@ -185,7 +206,7 @@ def menuAcesso(senha, nomeProf, matricula):
         if verificaDisponibilidade:
             tipo = 'retirada'
             # Função que escreve em acesso.txt
-            regAcesso(matricula, numero_patrimonio, tipo)
+            regAcesso(nomeProf, matricula, numero_patrimonio, tipo)
             # Função que registra os patrimônios retirados
             regPatrimonioRetirados(descricao, numero_patrimonio, nomeProf, matricula)
             # Função que remove o patrimônio que agora foi retirado da lista PatrimonioDisponiveis
@@ -214,7 +235,7 @@ def menuAcesso(senha, nomeProf, matricula):
 
         if not verificaDisponibilidade:
             tipo = 'devolução'
-            regAcesso(matricula, numero_patrimonio, tipo)  # Função que escreve em acesso.txt
+            regAcesso(nomeProf, matricula, numero_patrimonio, tipo)  # Função que escreve em acesso.txt
             regPatrimonioDispo(numero_patrimonio)  # Função que registra os patrimônios disponíveis
             atualizaPatrimoniosRetirados(numero_patrimonio)  # Função que remove o patrimônio que agora está disponivel da lista PatrimonioRetirados
 
@@ -253,14 +274,27 @@ Voltar para o Menu [3]''')
 
 
 def criptografarSenha(senha):
-    # Falta verificar se os caracteres estão ok
+    # Criptografia da senha. (CIFRA DE CÉSAR)
 
-    if len(senha) < 3:
-        print('\nSenha necessita pelo menos 3 caracteres')
+    for char in senha:
+        if char not in CARACTERES:
+            print('\nCaractere inválido.')
+            input('Pressione enter para voltar ao menu\n>>')
+            main()
+
+    if len(senha) < 4:
+        print('\nSenha necessita pelo menos 4 caracteres')
         input('Pressione enter para voltar ao menu\n>>')
         main()
-        
-    senha_cripto = senha
+
+    senha_cripto = ''
+
+    for caractere in senha:
+        if caractere in CARACTERES:
+            index = CARACTERES.find(caractere) + 5
+            if index >= 63:
+                index -= 63
+            senha_cripto += CARACTERES[index]
 
     return senha_cripto
 
@@ -275,6 +309,8 @@ def regPatrimonioRetirados(descricao, numero_patrimonio, nomeProf, matricula):
     arquivo.write(matricula)
 
     arquivo.close()
+
+    atualizaPatrimonioMaisUti(descricao, numero_patrimonio)
 
 
 def atualizaPatrimoniosRetirados(numero_patrimonio):
@@ -326,6 +362,26 @@ def atualizaPatrimonioDispo(numero_patrimonio):
     arquivo.close()
 
 
+def atualizaPatrimonioMaisUti(descricao, n_patrimonio):
+
+    data = datetime.now()
+    dia = str(data.day)
+    if len(dia) < 2:
+        dia = '0' + dia
+    mes = str(data.month)
+    if len(mes) < 2:
+        mes = '0' + mes
+    ano = str(data.year)
+
+    arquivo = open('PatrimoniosMaisUti.txt', 'a')
+
+    arquivo.write(dia + '/' + mes + '/' + ano + '\n')
+    arquivo.write(descricao)
+    arquivo.write(str(n_patrimonio) + '\n')
+
+    arquivo.close()
+
+
 def menuHistAcesso():
 
     def listaPatrimonioDispo():
@@ -371,7 +427,7 @@ def menuHistAcesso():
 
         for x in range(int(len(lista) / 4)):
             print('Descrição>{:.^40}NºPatrimônio>{:.>20}'.format(arquivo.readline()[:-1], arquivo.readline()))
-            print('Professor>{:.^40}NºMatrícula>{:.>20}'.format(arquivo.readline()[:-1], arquivo.readline()))
+            print('Professor>{:.^40}NºMatrícula>{:.>21}'.format(arquivo.readline()[:-1], arquivo.readline()))
             print('                                        ||')
         arquivo.close()
 
@@ -379,10 +435,130 @@ def menuHistAcesso():
         menuHistAcesso()
 
     def profTempoComPatrimonio():
-        pass
+        os.system('cls')
+        print('-' * 10 + 'LISTA PROFESSORES COM PATRIMONIO POR X TEMPO' + '-' * 10, end='\n\n')
+
+        patrimonio = input('Digite o número de patrimônio: ').strip()
+
+        dias = input('Insira a quantidade de dias: ').strip()
+        while not dias.isnumeric():
+            print('Valor inválido')
+            dias = input('Insira a quantidade de dias: ').strip()
+        dias = int(dias)
+
+        horas = input('Insira a quantidade de horas: ').strip()
+        while not horas.isnumeric():
+            print('Valor inválido')
+            horas = input('Insira a quantidade de horas: ').strip()
+        horas = int(horas)
+
+        listaParesPatrimonios = []
+        arquivo = open('acesso.txt', 'r')
+        lista = arquivo.readlines()
+        for cont, item in enumerate(lista):
+            if item == patrimonio + '\n':
+                listaParesPatrimonios.append(lista[cont-2])
+                listaParesPatrimonios.append(lista[cont])
+                listaParesPatrimonios.append(lista[cont + 2])
+                listaParesPatrimonios.append(lista[cont + 3])
+
+        print(listaParesPatrimonios)
+        for item in listaParesPatrimonios:
+            if listaParesPatrimonios[0] == listaParesPatrimonios[4]:
+                dia_ret = int(listaParesPatrimonios[2][:2])
+                mes_ret = int(listaParesPatrimonios[2][3:5])
+                ano_ret = int(listaParesPatrimonios[2][6:10])
+                dia_dev = int(listaParesPatrimonios[6][:2])
+                mes_dev = int(listaParesPatrimonios[6][3:5])
+                ano_dev = int(listaParesPatrimonios[6][6:10])
+                hora_ret = int(listaParesPatrimonios[3][:2])
+                min_ret = int(listaParesPatrimonios[3][3:5])
+                sec_ret = int(listaParesPatrimonios[3][6:8])
+                hora_dev = int(listaParesPatrimonios[7][:2])
+                min_dev = int(listaParesPatrimonios[7][3:5])
+                sec_dev = int(listaParesPatrimonios[7][6:8])
+
+                data_ret = datetime(year=ano_ret, month=mes_ret, day=dia_ret, hour=hora_ret, minute=min_ret,
+                                    second=sec_ret)
+                data_dev = datetime(year=ano_dev, month=mes_dev, day=dia_dev, hour=hora_dev, minute=min_dev,
+                                    second=sec_dev)
+                delta = data_dev - data_ret
+                print(delta)
+                if int(delta.days) <= dias: # and int(delta.min) <= horas * 60:
+                    print(type(delta.min))
+                    print(delta.min)
+
+        arquivo.close()
+        input()
+
+
+
+
+
+
+
 
     def patrimonioMaisUti():
-        pass
+        os.system('cls')
+        print('-' * 20 + 'PATRIMÔNIOS MAIS UTILIZADOS' + '-' * 20, end='\n\n')
+
+        dias = input('Insira a quantidade de dias: ').strip()
+        while not dias.isnumeric():
+            print('Valor inválido')
+            dias = input('Insira a quantidade de dias: ').strip()
+
+        dias = int(dias)
+        data_atual = date.today()
+
+        arquivo = open('PatrimoniosMaisUti.txt', 'r')
+
+        lista = arquivo.readlines()
+        arquivo.seek(0, 0)
+        c = 0
+        for linha in arquivo.readlines():
+            if c % 3 == 0:
+                dia = int(linha[:2])
+                mes = int(linha[3:5])
+                ano = int(linha[6:10])
+                delta = (date(year=ano, month=mes, day=dia) - data_atual).days
+                if abs(delta) > dias:
+                    lista.pop(c)
+                    lista.pop(c)
+                    lista.pop(c)
+                    c -= 3
+
+            c += 1
+
+        arquivo.close()
+
+        posicoes = [2]
+        for cont in range(int(len(lista)/3) - 1):
+            posicoes.append(posicoes[cont] + 3)
+
+        listaMaisUti = []
+        # Cria lista com as informações e atualiza o contador
+
+        for posicao in posicoes:
+            cont = 0
+            if lista[posicao] in lista:
+                cont += 1
+            if lista[posicao] not in listaMaisUti:
+                listaMaisUti.append(lista[posicao-1])
+                listaMaisUti.append(lista[posicao])
+                listaMaisUti.append(cont)
+            else:
+                cont += 1
+                pos = listaMaisUti.index(lista[posicao])
+                listaMaisUti[pos+1] = cont
+
+        print(listaMaisUti)
+
+        input()
+
+
+
+
+
 
     # Executa quando o menu do historico de acesso é chamado
     os.system('cls')
